@@ -1,0 +1,51 @@
+# Operating System & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Environment Variables & API Secrets (Groq / Claude Keys)
+.env
+.env.*
+!.env.example
+
+# Python Backend (FastAPI / SQLAlchemy)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.python-version
+
+# Python Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# Local SQLite Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Node / React Frontend Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Frontend Build & Cache Outputs
+frontend/dist/
+frontend/build/
+frontend/.next/
+frontend/out/
+dist/
+build/
+.next/
+.eslintcache
+.turbo/
+
+# Testing & Coverage Caches
+.pytest_cache/
+.coverage
+htmlcov/
