@@ -1,0 +1,591 @@
+{
+  "project": "Dynamic Risk & Repayment Engine - API Contract v3",
+  "version": "3.0",
+  "base_url": "http://localhost:8000",
+  "note": "Single source of truth. Changes require full team approval before modification.",
+  "prototype_note": "This contract defines a hackathon prototype. Automated actions are prototype decision outputs and should not be interpreted as production lending decisions.",
+
+  "endpoints": {
+    "GET /borrower/{id}": {
+      "description": "Returns the basic borrower profile.",
+      "owner": "Backend Support",
+      "path_params": {
+        "id": "string, e.g. BOR001"
+      },
+      "response_200": {
+        "borrower_id": "BOR001",
+        "name": "Raju Kumar",
+        "category": "farmer",
+        "language_pref": "hi",
+        "loan_amount": 25000,
+        "loan_start_date": "2025-01-15",
+        "phone_number": "+91XXXXXXXXXX"
+      },
+      "response_404": {
+        "error": "borrower_not_found",
+        "message": "No borrower exists with the supplied ID.",
+        "status_code": 404
+      }
+    },
+
+    "GET /borrowers": {
+      "description": "Returns borrowers for the dashboard table with optional filtering.",
+      "owner": "Backend Support",
+      "query_params": {
+        "category": "optional: farmer|gig_worker|vendor",
+        "risk_flag": "optional: lean_season|normal|festival_slow",
+        "hardship_classification": "optional: temporary|persistent|undetermined"
+      },
+      "response_200": {
+        "count": 87,
+        "borrowers": [
+          {
+            "borrower_id": "BOR001",
+            "name": "Raju Kumar",
+            "trust_score": 72,
+            "current_flag": "normal",
+            "upcoming_flag": "lean_season",
+            "upcoming_flag_month": "Oct",
+            "hardship_classification": "temporary"
+          }
+        ]
+      }
+    },
+
+    "GET /borrower/{id}/score": {
+      "description": "Returns the borrower trust score derived from alternative-data signals.",
+      "owner": "Backend Lead",
+      "path_params": {
+        "id": "string"
+      },
+      "response_200": {
+        "borrower_id": "BOR001",
+        "trust_score": 72,
+        "score_band": "medium_trust",
+        "score_factors": [
+          {
+            "factor": "utility_payments_ontime",
+            "weight": 0.4,
+            "value": 0.85
+          },
+          {
+            "factor": "supplier_payments_consistent",
+            "weight": 0.3,
+            "value": 0.6
+          },
+          {
+            "factor": "mobile_topup_frequency",
+            "weight": 0.3,
+            "value": 0.7
+          }
+        ],
+        "last_updated": "2026-09-10"
+      },
+      "response_404": {
+        "error": "borrower_not_found",
+        "message": "No borrower exists with the supplied ID.",
+        "status_code": 404
+      }
+    },
+
+    "GET /borrower/{id}/cashflow-history": {
+      "description": "Returns historical borrower-level financial records used for trend and seasonality analysis.",
+      "owner": "Backend Lead",
+      "path_params": {
+        "id": "string"
+      },
+      "response_200": {
+        "borrower_id": "BOR001",
+        "history_window_months": 12,
+        "monthly_history": [
+          {
+            "month": "2026-01",
+            "income": 18000,
+            "expenses": 12000,
+            "loan_repayment": 2500
+          },
+          {
+            "month": "2026-02",
+            "income": 19000,
+            "expenses": 12500,
+            "loan_repayment": 2500
+          }
+        ]
+      },
+      "response_404": {
+        "error": "borrower_not_found",
+        "message": "No borrower exists with the supplied ID.",
+        "status_code": 404
+      }
+    },
+
+    "GET /borrower/{id}/cashflow-analysis": {
+      "description": "Analyzes historical income, expenses and repayment behavior to distinguish temporary hardship from persistent deterioration and detect borrower-specific seasonality.",
+      "owner": "Backend Lead",
+      "path_params": {
+        "id": "string"
+      },
+      "response_200": {
+        "borrower_id": "BOR001",
+        "cashflow_status": "temporary_stress",
+        "trend_direction": "stable",
+        "income_change_pct": -18.2,
+        "expense_change_pct": 3.1,
+        "repayment_consistency": 0.94,
+        "seasonality_detected": true,
+        "seasonal_pattern": {
+          "low_income_months": ["Oct", "Nov"],
+          "high_income_months": ["Jan", "Feb"]
+        },
+        "hardship_classification": "temporary",
+        "confidence": 0.88,
+        "evidence": [
+          "Income declined 18.2% versus the 12-month average",
+          "A similar decline was observed during Oct-Nov in previous years",
+          "Repayments remained largely consistent"
+        ],
+        "last_updated": "2026-09-16"
+      },
+      "response_404": {
+        "error": "borrower_not_found",
+        "message": "No borrower exists with the supplied ID.",
+        "status_code": 404
+      }
+    },
+
+    "GET /borrower/{id}/risk-flags": {
+      "description": "Returns current and upcoming risk flags derived from borrower-specific historical cash-flow behavior and detected seasonal patterns.",
+      "owner": "Backend Lead",
+      "path_params": {
+        "id": "string"
+      },
+      "response_200": {
+        "borrower_id": "BOR001",
+        "analysis_basis": "borrower_history",
+        "current_flag": "normal",
+        "upcoming_flag": "lean_season",
+        "upcoming_flag_month": "Oct",
+        "flagged_months": ["Oct", "Nov"],
+        "flag_reason": "borrower_income_has_declined_during_oct_nov_for_3_consecutive_years",
+        "supporting_evidence": [
+          "Average income drops 22% during Oct-Nov",
+          "Repayment delays historically increase during Oct"
+        ]
+      },
+      "response_404": {
+        "error": "borrower_not_found",
+        "message": "No borrower exists with the supplied ID.",
+        "status_code": 404
+      },
+      "response_422": {
+        "error": "insufficient_history",
+        "message": "There is not enough historical data to reliably detect borrower-specific seasonality.",
+        "status_code": 422
+      }
+    },
+
+    "POST /chat/message": {
+      "description": "Receives a borrower message, classifies the message, extracts the reported hardship reason, combines the result with borrower-specific cash-flow analysis and seasonal patterns, and determines the prototype action.",
+      "owner": "Backend Lead",
+      "request_body": {
+        "borrower_id": "BOR001",
+        "message": "Baadh ne meri fasal barbaad kar di",
+        "language": "hi",
+        "input_type": "voice"
+      },
+      "response_200": {
+        "borrower_id": "BOR001",
+        "intent": "emergency",
+        "extracted_reason": "flood destroyed crops",
+        "intent_confidence": 0.91,
+        "cashflow_assessment": {
+          "hardship_classification": "temporary",
+          "confidence": 0.88
+        },
+        "matched_seasonal_flag": true,
+        "seasonal_match_type": "upcoming",
+        "matched_flag": "lean_season",
+        "matched_flag_month": "Oct",
+        "action_taken": "auto_relief",
+        "decision_explanation": [
+          "Emergency detected from borrower message",
+          "Reported hardship aligns with the borrower's upcoming historical seasonal risk window",
+          "Repayment behavior remained largely consistent",
+          "Cash-flow stress is classified as temporary"
+        ],
+        "payment_plan_updated": true,
+        "conversation_id": "CONV0001"
+      },
+      "response_404": {
+        "error": "borrower_not_found",
+        "message": "No borrower exists with the supplied ID.",
+        "status_code": 404
+      },
+      "response_500": {
+        "error": "claude_api_failure",
+        "message": "The language-model service failed while processing the borrower message.",
+        "status_code": 500,
+        "fallback_action": "escalated"
+      }
+    },
+
+    "GET /chat/history/{borrower_id}": {
+      "description": "Returns the borrower's conversation audit history.",
+      "owner": "Backend Lead",
+      "path_params": {
+        "borrower_id": "string"
+      },
+      "response_200": {
+        "borrower_id": "BOR001",
+        "conversations": [
+          {
+            "conversation_id": "CONV0001",
+            "timestamp": "2026-09-16T10:22:00Z",
+            "message": "Baadh ne meri fasal barbaad kar di",
+            "intent": "emergency",
+            "extracted_reason": "flood destroyed crops",
+            "action_taken": "auto_relief",
+            "seasonal_match_type": "upcoming"
+          }
+        ]
+      },
+      "response_404": {
+        "error": "borrower_not_found",
+        "message": "No borrower exists with the supplied ID.",
+        "status_code": 404
+      }
+    },
+
+    "GET /borrower/{id}/assessment": {
+      "description": "Returns a human-readable assessment of the borrower's current condition, evidence and prototype recommended action. This is a system recommendation and does not represent a manual loan-officer decision.",
+      "owner": "Backend Lead",
+      "path_params": {
+        "id": "string"
+      },
+      "response_200": {
+        "borrower_id": "BOR001",
+        "final_assessment": "temporary_stress",
+        "recommended_action": "defer_one_installment",
+        "confidence": 0.91,
+        "evidence": [
+          {
+            "factor": "income_drop",
+            "impact": "high",
+            "details": "18% below annual average"
+          },
+          {
+            "factor": "historical_seasonality",
+            "impact": "high",
+            "details": "Observed during previous years"
+          },
+          {
+            "factor": "repayment_behavior",
+            "impact": "medium",
+            "details": "94% on-time repayment rate"
+          }
+        ],
+        "generated_reasoning": "Current hardship appears seasonal and temporary. Repayment behavior remains strong and there is insufficient evidence of persistent deterioration."
+      },
+      "response_404": {
+        "error": "borrower_not_found",
+        "message": "No borrower exists with the supplied ID.",
+        "status_code": 404
+      }
+    },
+
+    "GET /borrower/{id}/payment-plan": {
+      "description": "Returns the original and currently adjusted repayment schedule.",
+      "owner": "Backend Support",
+      "path_params": {
+        "id": "string"
+      },
+      "response_200": {
+        "borrower_id": "BOR001",
+        "original_schedule": [
+          {
+            "due_date": "2026-10-01",
+            "amount": 2500,
+            "status": "pending"
+          }
+        ],
+        "adjusted_schedule": [
+          {
+            "due_date": "2026-10-01",
+            "amount": 0,
+            "status": "deferred"
+          },
+          {
+            "due_date": "2027-01-01",
+            "amount": 2500,
+            "status": "added"
+          }
+        ],
+        "reason_for_adjustment": "Temporary hardship confirmed through cash-flow analysis and emergency event assessment.",
+        "updated_by": "decision_engine",
+        "updated_at": "2026-09-16T12:00:00Z"
+      },
+      "response_404": {
+        "error": "borrower_not_found",
+        "message": "No borrower exists with the supplied ID.",
+        "status_code": 404
+      }
+    },
+
+    "POST /borrower/{id}/payment-plan/override": {
+      "description": "Allows a loan officer to manually override the current adjusted payment plan for an escalated case.",
+      "owner": "Backend Support",
+      "path_params": {
+        "id": "string"
+      },
+      "request_body": {
+        "new_schedule": "array of payment schedule objects",
+        "officer_note": "string"
+      },
+      "response_200": {
+        "status": "updated",
+        "updated_at": "2026-09-16T12:00:00Z",
+        "updated_by": "loan_officer"
+      },
+      "response_404": {
+        "error": "borrower_not_found",
+        "message": "No borrower exists with the supplied ID.",
+        "status_code": 404
+      },
+      "response_400": {
+        "error": "invalid_payment_schedule",
+        "message": "The supplied payment schedule is invalid.",
+        "status_code": 400
+      }
+    }
+  },
+
+  "decision_logic": {
+    "cashflow_analysis": {
+      "history_window_months": 12,
+      "inputs": [
+        "income_history",
+        "expense_history",
+        "repayment_history"
+      ]
+    },
+
+    "seasonality_detection": {
+      "description": "Detects recurring borrower-specific income and repayment patterns rather than assuming risk solely from borrower category.",
+      "minimum_history_months": 12,
+      "lookahead_months": 3
+    },
+
+    "risk_flag_semantics": {
+      "current_flag": "A risk condition that is active during the current period.",
+      "upcoming_flag": "The next relevant risk condition expected within the configured lookahead window.",
+      "upcoming_flag_month": "The month in which the upcoming risk window begins.",
+      "flagged_months": "All months belonging to the detected risk window."
+    },
+
+    "temporary_hardship": {
+      "conditions": [
+        "income_drop_detected",
+        "seasonality_detected == true",
+        "repayment_consistency >= configured_repayment_consistency_threshold"
+      ],
+      "result": "temporary"
+    },
+
+    "persistent_deterioration": {
+      "conditions": [
+        "income_decline_duration >= configured_months",
+        "repayment_consistency < configured_repayment_consistency_threshold",
+        "seasonality_detected == false"
+      ],
+      "result": "persistent"
+    },
+
+    "undetermined_hardship": {
+      "conditions": [
+        "available_evidence_is_insufficient",
+        "or_temporary_and_persistent_conditions_are_not_satisfied"
+      ],
+      "result": "undetermined"
+    },
+
+    "seasonal_match": {
+      "conditions": [
+        "reported_hardship_is_relevant_to_current_or_upcoming_risk_window"
+      ],
+      "match_types": ["current", "upcoming", "none"]
+    },
+
+    "auto_relief": {
+      "conditions": [
+        "intent == emergency",
+        "intent_confidence >= configured_intent_confidence_threshold",
+        "matched_seasonal_flag == true",
+        "hardship_classification == temporary"
+      ],
+      "result": "auto_relief"
+    },
+
+    "escalation": {
+      "conditions": [
+        "intent == emergency",
+        "intent_confidence < configured_intent_confidence_threshold",
+        "or hardship_classification == undetermined",
+        "or evidence_is_conflicting"
+      ],
+      "result": "escalated"
+    },
+
+    "no_action": {
+      "conditions": [
+        "intent == no_emergency",
+        "or no_action_is_required"
+      ],
+      "result": "none"
+    },
+
+    "fallback": {
+      "claude_api_failure_action": "escalated"
+    }
+  },
+
+  "configuration": {
+    "history_window_months": 12,
+    "seasonality_minimum_history_months": 12,
+    "seasonality_lookahead_months": 3,
+    "intent_confidence_threshold": "configured_value",
+    "repayment_consistency_threshold": "configured_value",
+    "persistent_decline_duration_months": "configured_value"
+  },
+
+  "shared_enums": {
+    "borrower_category": ["farmer", "gig_worker", "vendor"],
+
+    "risk_flag": ["lean_season", "normal", "festival_slow"],
+
+    "intent": ["emergency", "no_emergency"],
+
+    "action_taken": ["auto_relief", "escalated", "none"],
+
+    "cashflow_status": ["healthy", "temporary_stress", "persistent_deterioration"],
+
+    "hardship_classification": ["temporary", "persistent", "undetermined"],
+
+    "trend_direction": ["improving", "stable", "declining"],
+
+    "seasonal_match_type": ["current", "upcoming", "none"],
+
+    "payment_status": ["pending", "paid", "deferred", "added", "overdue"],
+
+    "score_band": ["low_trust", "medium_trust", "high_trust"]
+  },
+
+  "shared_data_shapes": {
+    "payment_schedule_item": {
+      "due_date": "YYYY-MM-DD",
+      "amount": "number",
+      "status": "payment_status"
+    },
+
+    "borrower_summary": {
+      "borrower_id": "string",
+      "name": "string",
+      "trust_score": "number",
+      "current_flag": "risk_flag",
+      "upcoming_flag": "risk_flag or null",
+      "upcoming_flag_month": "string or null",
+      "hardship_classification": "hardship_classification"
+    }
+  },
+
+  "error_format_standard": {
+    "error": "short_snake_case_code",
+    "message": "human readable explanation",
+    "status_code": "HTTP status code"
+  },
+
+  "error_status_codes": {
+    "400": "Bad request or invalid input",
+    "404": "Borrower or requested resource not found",
+    "422": "Request is valid but available data is insufficient for the requested analysis",
+    "500": "Internal or external service failure"
+  },
+
+  "ownership": {
+    "backend_lead": [
+      "GET /borrower/{id}/score",
+      "GET /borrower/{id}/cashflow-history",
+      "GET /borrower/{id}/cashflow-analysis",
+      "GET /borrower/{id}/risk-flags",
+      "POST /chat/message",
+      "GET /chat/history/{borrower_id}",
+      "GET /borrower/{id}/assessment",
+      "trust_score_logic",
+      "cashflow_analysis",
+      "seasonality_detection",
+      "decision_engine",
+      "claude_integration"
+    ],
+
+    "backend_support": [
+      "GET /borrower/{id}",
+      "GET /borrowers",
+      "GET /borrower/{id}/payment-plan",
+      "POST /borrower/{id}/payment-plan/override",
+      "borrower_data_storage",
+      "payment_schedule_storage"
+    ],
+
+    "frontend_lead": [
+      "dashboard",
+      "routing",
+      "API_integration",
+      "state_management",
+      "borrower_selection",
+      "chat_interface",
+      "final_integration"
+    ],
+
+    "frontend_support": [
+      "TrustScoreCard",
+      "CashFlowChart",
+      "CashFlowStatusCard",
+      "RiskCard",
+      "AssessmentCard",
+      "EvidenceList",
+      "PaymentPlanTable",
+      "BorrowerTable",
+      "StatusBadge",
+      "reusable_UI_components"
+    ]
+  },
+
+  "integration_flow": {
+    "step_1": "Frontend requests borrower information.",
+    "step_2": "Backend returns borrower profile, trust score, cash-flow data, risk flags and payment plan.",
+    "step_3": "Borrower sends a text or voice-derived message.",
+    "step_4": "Backend Lead processes the message using Claude/NLP.",
+    "step_5": "Cash-flow analysis and borrower-specific seasonality are checked.",
+    "step_6": "Decision engine combines message intent, confidence, seasonal match and hardship classification.",
+    "step_7": "System returns auto_relief, escalated or none.",
+    "step_8": "If auto_relief is triggered, the payment plan is updated through the backend payment-plan service.",
+    "step_9": "Conversation and decision information are stored for audit history.",
+    "step_10": "Frontend refreshes the assessment and payment-plan information."
+  },
+
+  "demo_scenario": {
+    "demo_date": "2026-09-16",
+    "borrower_id": "BOR001",
+    "borrower": "Raju Kumar",
+    "category": "farmer",
+    "trust_score": 72,
+    "current_flag": "normal",
+    "upcoming_flag": "lean_season",
+    "upcoming_flag_month": "Oct",
+    "hardship_classification": "temporary",
+    "borrower_message": "Baadh ne meri fasal barbaad kar di",
+    "intent": "emergency",
+    "intent_confidence": 0.91,
+    "seasonal_match": "upcoming",
+    "action": "auto_relief"
+  }
+}
