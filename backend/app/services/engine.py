@@ -153,6 +153,13 @@ class AnalysisEngine:
                 updated_at=self.clock.now(),
             )
             payment_updated = True
+            # Also persist to the SQLite layer (Backend Support's storage) so
+            # GET /borrower/{id}/payment-plan reflects the change immediately.
+            try:
+                from services.payment_service import apply_auto_relief as _sql_relief
+                _sql_relief(borrower.borrower_id, updated_at=self.clock.now())
+            except Exception:  # noqa: BLE001 — SQLite sync failure must not break the response
+                pass
 
         conversation_id = f"CONV{len(self.conversations.list_for_borrower(borrower.borrower_id)) + 1:04d}"
         item = ConversationItem(

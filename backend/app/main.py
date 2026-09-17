@@ -5,6 +5,13 @@ from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.routers import analysis, backend_b, chat
 
+# Ensure SQLite tables exist before the first request (Backend Support's DB layer).
+try:
+    from database import init_db
+    init_db()
+except Exception:  # noqa: BLE001 — don't crash the app if DB setup fails at import time
+    pass
+
 app = FastAPI(
     title="Dynamic Risk & Repayment Engine",
     version="3.0",

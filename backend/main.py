@@ -1,3 +1,19 @@
+# ---------------------------------------------------------------------------
+# RETIRED — Backend Support prototype entry point
+#
+# This file was the original standalone entry point for Backend Support's
+# SQLite-backed routes. It has been superseded by app/routers/backend_b.py,
+# which provides the same four routes (GET /borrower/{id}, GET /borrowers,
+# GET /borrower/{id}/payment-plan, POST /borrower/{id}/payment-plan/override)
+# but integrated into the unified app/main.py application.
+#
+# DO NOT start this file. Run the project with:
+#   uvicorn app.main:app --reload
+#
+# The database.py, seed.py, and services/payment_service.py files are still
+# active — they are imported by app/routers/backend_b.py and app/services/engine.py.
+# ---------------------------------------------------------------------------
+
 from fastapi import FastAPI, HTTPException, Query
 from database import SessionLocal, Borrower, PaymentSchedule, init_db
 from services.payment_service import apply_auto_relief

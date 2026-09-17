@@ -376,6 +376,10 @@ class InMemoryPaymentPlanGateway:
         self._plans[borrower_id] = updated
         return updated
 
+    def update_plan(self, borrower_id: str, plan) -> None:
+        """Directly store an externally constructed plan (e.g. from a loan officer override)."""
+        self._plans[borrower_id] = plan
+
 
 class InMemoryConversationStore:
     def __init__(self):
