@@ -9,29 +9,30 @@ const config: Config = {
         serif: ["var(--font-serif)", "ui-serif", "Georgia", "serif"],
       },
       colors: {
+        // Dark theme remapping for existing component tokens
         ink: {
-          DEFAULT: "#1b2430",
-          muted: "#5c6570",
+          DEFAULT: "#fafafa", // was #1b2430 (dark text) → now light text
+          muted: "#a1a1aa", // was #5c6570 → zinc-400
         },
         paper: {
-          DEFAULT: "#f4efe6",
-          raised: "#fbf8f2",
+          DEFAULT: "#18181b", // was #f4efe6 (light bg) → zinc-900
+          raised: "#27272a", // was #fbf8f2 → zinc-800
         },
         teal: {
-          DEFAULT: "#0f5f56",
-          soft: "#d7ece8",
+          DEFAULT: "#10b981", // was #0f5f56 → emerald-500
+          soft: "#064e3b", // was #d7ece8 → emerald-900
         },
         clay: {
-          DEFAULT: "#c45c26",
-          soft: "#f4ddd0",
+          DEFAULT: "#f97316", // was #c45c26 → orange-500
+          soft: "#7c2d12", // was #f4ddd0 → orange-900
         },
         gold: {
-          DEFAULT: "#b0892a",
-          soft: "#f3e6c4",
+          DEFAULT: "#eab308", // was #b0892a → yellow-500
+          soft: "#713f12", // was #f3e6c4 → yellow-900
         },
       },
       boxShadow: {
-        card: "0 1px 0 rgba(27, 36, 48, 0.04), 0 12px 32px rgba(27, 36, 48, 0.06)",
+        card: "0 1px 0 rgba(255, 255, 255, 0.05), 0 12px 32px rgba(0, 0, 0, 0.4)",
       },
     },
   },
