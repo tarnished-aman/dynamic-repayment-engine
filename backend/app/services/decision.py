@@ -25,7 +25,20 @@ def decide_action(
     matched: bool,
     match_type: str,
     settings: Settings | None = None,
-) -> tuple[str, list[str]]:
+    matched_flag: str | None = None,
+    matched_flag_month: str | None = None,
+) -> dict:
+    """Return a decision dict consumed directly by the engine and routers.
+
+    Keys
+    ----
+    cashflow_assessment     : dict with hardship_classification and confidence
+    seasonal_match_type     : "current" | "upcoming" | "none"
+    matched_flag            : the matched risk flag label, or None
+    matched_flag_month      : the month string for an upcoming match, or None
+    action_taken            : "auto_relief" | "escalated" | "none"
+    decision_explanation    : list[str] of human-readable reasoning steps
+    """
     settings = settings or get_settings()
     intent = nlp["intent"]
     confidence = nlp["intent_confidence"]
@@ -58,15 +71,24 @@ def decide_action(
     conflicting = hardship == "persistent" and analysis.seasonality_detected
 
     if intent != "emergency":
-        return "none", explanation
+        action = "none"
+    else:
+        auto_relief = (
+            confidence >= settings.intent_confidence_threshold
+            and matched
+            and hardship == "temporary"
+            and not conflicting
+        )
+        action = "auto_relief" if auto_relief else "escalated"
 
-    auto_relief = (
-        confidence >= settings.intent_confidence_threshold
-        and matched
-        and hardship == "temporary"
-        and not conflicting
-    )
-    if auto_relief:
-        return "auto_relief", explanation
-
-    return "escalated", explanation
+    return {
+        "cashflow_assessment": {
+            "hardship_classification": hardship,
+            "confidence": analysis.confidence,
+        },
+        "seasonal_match_type": match_type,
+        "matched_flag": matched_flag,
+        "matched_flag_month": matched_flag_month,
+        "action_taken": action,
+        "decision_explanation": explanation,
+    }

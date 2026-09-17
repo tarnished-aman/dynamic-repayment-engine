@@ -1,9 +1,11 @@
 from fastapi.testclient import TestClient
 
+from app.config import Settings
 from app.main import app
 from app.services.engine import engine
 from app.data import InMemoryBorrowerRepository, InMemoryConversationStore, InMemoryPaymentPlanGateway
 from app.services.engine import AnalysisEngine
+from app.services.nlp import NlpService
 
 
 client = TestClient(app)
@@ -62,6 +64,7 @@ def test_raju_flood_message_auto_relief():
     fresh = AnalysisEngine(
         repo=InMemoryBorrowerRepository(),
         conversations=InMemoryConversationStore(),
+        nlp=NlpService(Settings(groq_api_key="")),
     )
     fresh.payments = InMemoryPaymentPlanGateway(fresh.repo)
 
@@ -128,6 +131,7 @@ def test_no_emergency_takes_no_action():
     isolated = AnalysisEngine(
         repo=InMemoryBorrowerRepository(),
         conversations=InMemoryConversationStore(),
+        nlp=NlpService(Settings(groq_api_key="")),
     )
     result = isolated.handle_message(
         ChatMessageRequest(

@@ -134,8 +134,17 @@ class AnalysisEngine:
             flags = build_risk_flags(borrower, analysis, self.clock.today(), self.settings)
 
         matched, match_type, matched_flag, matched_month = seasonal_match(nlp, flags)
-        action, explanation = decide_action(nlp, analysis, matched, match_type, self.settings)
+        decision = decide_action(
+            nlp,
+            analysis,
+            matched,
+            match_type,
+            self.settings,
+            matched_flag=matched_flag,
+            matched_flag_month=matched_month,
+        )
 
+        action = decision["action_taken"]
         payment_updated = False
         # Decision engine never writes schedules itself. Auto-relief is a Backend B mutation.
         if action == "auto_relief":
@@ -154,8 +163,8 @@ class AnalysisEngine:
             message=message,
             intent=nlp["intent"],
             extracted_reason=nlp["extracted_reason"],
-            action_taken=action,
-            seasonal_match_type=match_type,
+            action_taken=action,  # type: ignore[arg-type]
+            seasonal_match_type=decision["seasonal_match_type"],  # type: ignore[arg-type]
         )
         self.conversations.append(borrower.borrower_id, item)
 
@@ -164,16 +173,13 @@ class AnalysisEngine:
             intent=nlp["intent"],
             extracted_reason=nlp["extracted_reason"],
             intent_confidence=nlp["intent_confidence"],
-            cashflow_assessment={
-                "hardship_classification": analysis.hardship_classification,
-                "confidence": analysis.confidence,
-            },
+            cashflow_assessment=decision["cashflow_assessment"],
             matched_seasonal_flag=matched,
-            seasonal_match_type=match_type,  # type: ignore[arg-type]
-            matched_flag=matched_flag,  # type: ignore[arg-type]
-            matched_flag_month=matched_month,
+            seasonal_match_type=decision["seasonal_match_type"],  # type: ignore[arg-type]
+            matched_flag=decision["matched_flag"],  # type: ignore[arg-type]
+            matched_flag_month=decision["matched_flag_month"],
             action_taken=action,  # type: ignore[arg-type]
-            decision_explanation=explanation,
+            decision_explanation=decision["decision_explanation"],
             payment_plan_updated=payment_updated,
             conversation_id=conversation_id,
         )

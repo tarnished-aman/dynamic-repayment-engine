@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 
 from app.routers import analysis, chat
 
@@ -52,3 +52,9 @@ app.include_router(chat.router)
 # Backend B endpoints: borrower profile, borrower list, payment plan, and override
 from app.routers import backend_b  # noqa: E402
 app.include_router(backend_b.router)
+
+
+@app.get("/", include_in_schema=False)
+def root():
+    """Redirect browser / curl requests to the interactive API docs."""
+    return RedirectResponse(url="/docs")
