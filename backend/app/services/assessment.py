@@ -1,3 +1,5 @@
+from typing import Literal
+
 from app.schemas import (
     AssessmentEvidenceItem,
     AssessmentResponse,
@@ -6,12 +8,15 @@ from app.schemas import (
     RiskFlagsResponse,
 )
 
+RecommendedAction = Literal["defer_one_installment", "escalate_to_loan_officer", "none"]
+
 
 def build_assessment(
     analysis: CashflowAnalysisResponse,
     flags: RiskFlagsResponse,
     latest_chat: ConversationItem | None,
 ) -> AssessmentResponse:
+    recommended: RecommendedAction
     if latest_chat and latest_chat.action_taken == "auto_relief":
         recommended = "defer_one_installment"
         confidence = 0.91

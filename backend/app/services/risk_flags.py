@@ -4,7 +4,7 @@ from datetime import date
 from app.config import Settings, get_settings
 from app.data import abbr_from_key, month_key, shift_month
 from app.schemas import BorrowerRecord, CashflowAnalysisResponse, RiskFlagsResponse
-from app.services.seasonality import detect_seasonal_pattern, window_records
+from app.services.seasonality import window_records
 
 
 def _month_num(abbr: str) -> int:
@@ -70,7 +70,6 @@ def build_risk_flags(
             upcoming_month = abbr
             break
 
-    window = window_records(borrower, settings)
     seasonal_rows = [row for row in borrower.monthly_history if abbr_from_key(row.month) in flagged]
     avg_all = sum(row.income for row in borrower.monthly_history) / max(len(borrower.monthly_history), 1)
     avg_season = (
@@ -98,7 +97,6 @@ def build_risk_flags(
         flag_reason = "no_borrower_specific_seasonal_income_pattern_detected"
         supporting = ["Historical monthly income does not show a repeating lean window"]
 
-    _ = window  # analysis already used the 12-month window
     return RiskFlagsResponse(
         borrower_id=borrower.borrower_id,
         analysis_basis="borrower_history",

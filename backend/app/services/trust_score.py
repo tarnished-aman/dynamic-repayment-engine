@@ -1,4 +1,4 @@
-from app.config import Settings, get_settings
+from app.config import Settings, get_settings  # noqa: F401 — kept for callers that pass settings
 from app.schemas import BorrowerRecord, ScoreFactor, TrustScoreResponse
 
 
@@ -17,9 +17,8 @@ def _band(score: int) -> str:
 
 def calculate_trust_score(
     borrower: BorrowerRecord,
-    settings: Settings | None = None,
+    settings: Settings | None = None,  # noqa: ARG001 — reserved for future threshold config
 ) -> TrustScoreResponse:
-    _ = settings or get_settings()
     signals = borrower.alternative_signals
     factors = [
         ScoreFactor(

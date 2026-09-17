@@ -5,6 +5,7 @@ from app.schemas import (
     AlternativeSignals,
     BorrowerRecord,
     MonthlyRecord,
+    PaymentPlan,
     PaymentScheduleItem,
 )
 
@@ -316,8 +317,6 @@ class InMemoryPaymentPlanGateway:
         self._plans: dict[str, PaymentPlan] = {}
 
     def get_plan(self, borrower_id: str):
-        from app.schemas import PaymentPlan
-
         if borrower_id in self._plans:
             return self._plans[borrower_id]
         borrower = self._repo.get_borrower(borrower_id)
@@ -334,8 +333,6 @@ class InMemoryPaymentPlanGateway:
 
     def apply_auto_relief(self, borrower_id: str, reason: str, *, updated_at: datetime):
         from copy import deepcopy
-
-        from app.schemas import PaymentPlan
 
         plan = self.get_plan(borrower_id)
         if plan is None:

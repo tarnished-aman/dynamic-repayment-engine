@@ -49,6 +49,6 @@ async def validation_exception_handler(_request: Request, exc: RequestValidation
 app.include_router(analysis.router)
 app.include_router(chat.router)
 
-# Backend B compile point:
-# from app.routers.backend_b import router as backend_b_router
-# app.include_router(backend_b_router)
+# Backend B endpoints: borrower profile, borrower list, payment plan, and override
+from app.routers import backend_b  # noqa: E402
+app.include_router(backend_b.router)

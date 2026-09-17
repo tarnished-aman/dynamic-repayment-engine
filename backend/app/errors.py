@@ -29,6 +29,10 @@ def insufficient_history() -> HTTPException:
 
 
 def nlp_failure() -> HTTPException:
+    """
+    Raised when the Groq (LLM) service call fails.
+    The error code is kept as 'claude_api_failure' for API contract compatibility.
+    """
     return api_error(
         500,
         "claude_api_failure",

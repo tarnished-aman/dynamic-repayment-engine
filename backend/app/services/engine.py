@@ -54,6 +54,8 @@ class AnalysisEngine:
 
     def analysis(self, borrower_id: str):
         borrower = self.require_borrower(borrower_id)
+        if not borrower.monthly_history:
+            raise insufficient_history()
         return analyze_cashflow(borrower, self.clock.today(), self.settings)
 
     def risk_flags(self, borrower_id: str):

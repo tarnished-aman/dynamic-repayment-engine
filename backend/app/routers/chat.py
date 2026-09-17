@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Request
 
+import app.services.engine as engine_module
+
 from app.errors import api_error
 from app.schemas import ChatMessageRequest
-from app.services import engine as engine_module
 
 router = APIRouter()
 
