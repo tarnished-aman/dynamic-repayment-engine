@@ -9,6 +9,7 @@ class Settings(BaseSettings):
 
     groq_api_key: str = ""
     groq_model: str = "llama-3.3-70b-versatile"
+    groq_whisper_model: str = "whisper-large-v3"
 
     demo_date: date = date(2026, 9, 16)
     history_window_months: int = 12

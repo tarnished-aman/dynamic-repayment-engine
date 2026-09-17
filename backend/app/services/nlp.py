@@ -1,5 +1,6 @@
 import json
 import re
+from io import BytesIO
 
 from groq import Groq
 
@@ -32,15 +33,27 @@ EMERGENCY_HINTS = [
 ]
 
 
-def _heuristic_classify(message: str) -> dict:
-    normalized = re.sub(r"\s+", " ", message.strip().lower())
-    if normalized == DEMO_FLOOD_MESSAGE:
-        return {
-            "intent": "emergency",
-            "extracted_reason": "flood destroyed crops",
-            "intent_confidence": 0.91,
-        }
+def normalize_message(message: str) -> str:
+    return re.sub(r"\s+", " ", message.strip().lower())
 
+
+def is_demo_flood_message(message: str) -> bool:
+    return normalize_message(message) == DEMO_FLOOD_MESSAGE
+
+
+def demo_flood_classification() -> dict:
+    return {
+        "intent": "emergency",
+        "extracted_reason": "flood destroyed crops",
+        "intent_confidence": 0.91,
+    }
+
+
+def _heuristic_classify(message: str) -> dict:
+    if is_demo_flood_message(message):
+        return demo_flood_classification()
+
+    normalized = normalize_message(message)
     hits = [hint for hint in EMERGENCY_HINTS if hint in normalized]
     if hits:
         reason = message.strip()
@@ -85,13 +98,33 @@ def _parse_model_json(text: str) -> dict:
 
 
 class NlpService:
-    """Groq Llama intent extraction with a deterministic prototype fallback."""
+    """Groq Whisper transcription + Llama intent extraction, with a prototype fallback."""
 
     def __init__(self, settings: Settings | None = None):
         self.settings = settings or get_settings()
         self._client = Groq(api_key=self.settings.groq_api_key) if self.settings.groq_api_key else None
 
+    def transcribe(self, audio_bytes: bytes, filename: str, language: str) -> str:
+        if self._client is None:
+            raise nlp_failure()
+        try:
+            buffer = BytesIO(audio_bytes)
+            buffer.name = filename or "audio.webm"
+            result = self._client.audio.transcriptions.create(
+                file=buffer,
+                model=self.settings.groq_whisper_model,
+                language=language if language in {"hi", "en"} else None,
+            )
+            text = getattr(result, "text", None) or str(result)
+            if not str(text).strip():
+                raise ValueError("empty transcription")
+            return str(text).strip()
+        except Exception as exc:  # noqa: BLE001 — contract maps STT failure to 500
+            raise nlp_failure() from exc
+
     def classify(self, message: str, language: str) -> dict:
+        if is_demo_flood_message(message):
+            return demo_flood_classification()
         if self._client is None:
             return _heuristic_classify(message)
 
@@ -107,10 +140,14 @@ class NlpService:
             completion = self._client.chat.completions.create(
                 model=self.settings.groq_model,
                 temperature=0,
+                response_format={"type": "json_object"},
                 messages=[
                     {
                         "role": "system",
-                        "content": "You extract borrower hardship intent for a prototype decision engine.",
+                        "content": (
+                            "You extract borrower hardship intent for a prototype decision engine. "
+                            "Respond with JSON only."
+                        ),
                     },
                     {"role": "user", "content": prompt},
                 ],

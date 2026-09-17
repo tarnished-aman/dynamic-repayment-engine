@@ -91,6 +91,37 @@ def test_raju_flood_message_auto_relief():
     assert statuses["2027-01-01"] == "added"
 
 
+def test_post_chat_message_http_auto_relief():
+    isolated = AnalysisEngine(
+        repo=InMemoryBorrowerRepository(),
+        conversations=InMemoryConversationStore(),
+    )
+    isolated.payments = InMemoryPaymentPlanGateway(isolated.repo)
+    from app.services import engine as engine_module
+
+    previous = engine_module.engine
+    engine_module.engine = isolated
+    try:
+        response = client.post(
+            "/chat/message",
+            json={
+                "borrower_id": "BOR001",
+                "message": "Baadh ne meri fasal barbaad kar di",
+                "language": "hi",
+                "input_type": "voice",
+            },
+        )
+    finally:
+        engine_module.engine = previous
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["action_taken"] == "auto_relief"
+    assert body["matched_flag"] == "lean_season"
+    assert body["payment_plan_updated"] is True
+    assert isolated.payments.get_plan("BOR001").updated_by == "decision_engine"
+
+
 def test_no_emergency_takes_no_action():
     from app.schemas import ChatMessageRequest
 

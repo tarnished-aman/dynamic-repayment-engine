@@ -80,7 +80,7 @@ def build_risk_flags(
     years = sorted({int(row.month.split("-")[0]) for row in seasonal_rows})
 
     if flagged:
-        months_label = "-".join(flagged).lower()
+        months_label = "_".join(item.lower() for item in flagged)
         flag_reason = (
             f"borrower_income_has_declined_during_{months_label}_for_{max(len(years), 1)}_consecutive_years"
         )

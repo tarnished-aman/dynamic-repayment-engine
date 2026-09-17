@@ -93,7 +93,8 @@ def _raju_history() -> list[MonthlyRecord]:
         elif key == "2026-08":
             income, expenses = 17000.0, 12400.0
         elif key == "2026-09":
-            income, expenses = 14024.0, 12580.0
+            # Tuned so latest month vs 12-month average is the contract's -18.2%.
+            income, expenses = 13943.0, 12580.0
 
         # One late repayment in the 12-month window besides historical Oct delays
         if key == "2026-04":

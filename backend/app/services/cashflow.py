@@ -92,7 +92,7 @@ def classify_hardship(
         return "temporary", "temporary_stress", 0.88, evidence
     if not income_drop and repayment_ok:
         return (
-            "temporary" if seasonality else "undetermined",
+            "undetermined",
             "healthy",
             0.8,
             evidence or ["Income and repayment are within normal bounds for this borrower"],
@@ -159,13 +159,6 @@ def analyze_cashflow(
             )
             for item in evidence
         ]
-    if hardship == "temporary" and seasonal:
-        # Keep healthy borrowers with only historical seasonality from looking stressed.
-        if income_change > settings.income_drop_threshold_pct:
-            hardship = "undetermined" if status == "healthy" else hardship
-
-    if status == "healthy" and hardship == "temporary":
-        hardship = "undetermined"
 
     return CashflowAnalysisResponse(
         borrower_id=borrower.borrower_id,

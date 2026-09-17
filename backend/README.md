@@ -12,7 +12,12 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-Optional: copy `.env.example` to `.env` and set `GROQ_API_KEY`. Without a key, NLP uses the prototype classifier (the Raju flood message still returns confidence `0.91`).
+Optional: copy `.env.example` to `.env` and set `GROQ_API_KEY`.
+
+- `POST /chat/message` JSON body matches the API contract.
+- Optional multipart field `audio` is transcribed with Groq `whisper-large-v3`, then classified with `llama-3.3-70b-versatile`.
+- The exact Raju demo line (`Baadh ne meri fasal barbaad kar di`) always returns contract values (`emergency`, `0.91`) so the hackathon path is deterministic.
+- Without a key, other messages use the prototype classifier. LLM/STT failures return `500 claude_api_failure` with `fallback_action: escalated`.
 
 Demo clock is **2026-09-16**. Do not change it or October will incorrectly appear as current risk.
 

@@ -93,9 +93,27 @@ class AnalysisEngine:
             "conversations": self.conversations.list_for_borrower(borrower_id),
         }
 
-    def handle_message(self, payload: ChatMessageRequest) -> ChatMessageResponse:
+    def handle_message(
+        self,
+        payload: ChatMessageRequest,
+        *,
+        audio_bytes: bytes | None = None,
+        audio_filename: str | None = None,
+    ) -> ChatMessageResponse:
         borrower = self.require_borrower(payload.borrower_id)
-        nlp = self.nlp.classify(payload.message, payload.language)
+        message = payload.message.strip()
+        if audio_bytes:
+            message = self.nlp.transcribe(audio_bytes, audio_filename or "audio.webm", payload.language)
+        elif not message:
+            from app.errors import api_error
+
+            raise api_error(
+                400,
+                "invalid_request",
+                "A borrower message or audio recording is required.",
+            )
+
+        nlp = self.nlp.classify(message, payload.language)
         analysis = analyze_cashflow(borrower, self.clock.today(), self.settings)
 
         if len(borrower.monthly_history) < self.settings.seasonality_minimum_history_months:
@@ -117,6 +135,7 @@ class AnalysisEngine:
         action, explanation = decide_action(nlp, analysis, matched, match_type, self.settings)
 
         payment_updated = False
+        # Decision engine never writes schedules itself. Auto-relief is a Backend B mutation.
         if action == "auto_relief":
             reason = "Temporary hardship confirmed through cash-flow analysis and emergency event assessment."
             self.payments.apply_auto_relief(
@@ -130,7 +149,7 @@ class AnalysisEngine:
         item = ConversationItem(
             conversation_id=conversation_id,
             timestamp=self.clock.now(),
-            message=payload.message,
+            message=message,
             intent=nlp["intent"],
             extracted_reason=nlp["extracted_reason"],
             action_taken=action,
