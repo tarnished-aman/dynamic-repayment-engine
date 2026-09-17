@@ -4,6 +4,15 @@ from services.payment_service import apply_auto_relief
 from typing import Optional
 
 app = FastAPI()
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # for hackathon purposes, allow everything
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 init_db()
 
 @app.get("/borrower/{id}")
@@ -93,6 +102,15 @@ def override_payment_plan(id: str, body: OverrideRequest):
     if not borrower:
         db.close()
         raise HTTPException(status_code=404, detail={"error": "borrower_not_found", "message": "No borrower exists with the supplied ID.", "status_code": 404})
+
+    if not body.new_schedule or len(body.new_schedule) == 0:
+        db.close()
+        raise HTTPException(status_code=400, detail={"error": "invalid_payment_schedule", "message": "Schedule cannot be empty.", "status_code": 400})
+
+    for item in body.new_schedule:
+        if item.amount < 0:
+            db.close()
+            raise HTTPException(status_code=400, detail={"error": "invalid_payment_schedule", "message": "Amount cannot be negative.", "status_code": 400})
 
     db.query(PaymentSchedule).filter(PaymentSchedule.borrower_id == id, PaymentSchedule.schedule_type == "adjusted").delete()
     for item in body.new_schedule:
