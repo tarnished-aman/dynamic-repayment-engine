@@ -9,10 +9,13 @@ from app.data import (
 )
 from app.errors import borrower_not_found, insufficient_history
 from app.schemas import (
+    ChatHistoryResponse,
     ChatMessageRequest,
     ChatMessageResponse,
     ConversationItem,
+    RiskFlagsResponse,
 )
+from app.services import BorrowerRepository, Clock, ConversationStore, PaymentPlanGateway
 from app.services.assessment import build_assessment
 from app.services.cashflow import analyze_cashflow, cashflow_history
 from app.services.decision import decide_action, seasonal_match
@@ -20,17 +23,26 @@ from app.services.nlp import NlpService
 from app.services.risk_flags import build_risk_flags
 from app.services.trust_score import calculate_trust_score
 
+_INSUFFICIENT_HISTORY_FLAGS = dict(
+    current_flag="normal",
+    upcoming_flag=None,
+    upcoming_flag_month=None,
+    flagged_months=[],
+    flag_reason="insufficient_history",
+    supporting_evidence=["Not enough history for seasonality"],
+)
+
 
 class AnalysisEngine:
     """Backend A facade used by routers. Swap repository/gateway when Backend B lands."""
 
     def __init__(
         self,
-        repo: InMemoryBorrowerRepository | None = None,
-        payments: InMemoryPaymentPlanGateway | None = None,
-        conversations: InMemoryConversationStore | None = None,
+        repo: BorrowerRepository | None = None,
+        payments: PaymentPlanGateway | None = None,
+        conversations: ConversationStore | None = None,
         nlp: NlpService | None = None,
-        clock: DemoClock | None = None,
+        clock: Clock | None = None,
         settings: Settings | None = None,
     ):
         self.settings = settings or get_settings()
@@ -69,31 +81,23 @@ class AnalysisEngine:
         borrower = self.require_borrower(borrower_id)
         analysis = analyze_cashflow(borrower, self.clock.today(), self.settings)
         if len(borrower.monthly_history) < self.settings.seasonality_minimum_history_months:
-            flags = None
+            flags = RiskFlagsResponse(
+                borrower_id=borrower_id,
+                analysis_basis="borrower_history",
+                **_INSUFFICIENT_HISTORY_FLAGS,
+            )
         else:
             flags = build_risk_flags(borrower, analysis, self.clock.today(), self.settings)
         chats = self.conversations.list_for_borrower(borrower_id)
         latest = chats[-1] if chats else None
-        if flags is None:
-            from app.schemas import RiskFlagsResponse
-
-            flags = RiskFlagsResponse(
-                borrower_id=borrower_id,
-                current_flag="normal",
-                upcoming_flag=None,
-                upcoming_flag_month=None,
-                flagged_months=[],
-                flag_reason="insufficient_history",
-                supporting_evidence=["Not enough history for seasonality"],
-            )
         return build_assessment(analysis, flags, latest)
 
-    def chat_history(self, borrower_id: str):
+    def chat_history(self, borrower_id: str) -> ChatHistoryResponse:
         self.require_borrower(borrower_id)
-        return {
-            "borrower_id": borrower_id,
-            "conversations": self.conversations.list_for_borrower(borrower_id),
-        }
+        return ChatHistoryResponse(
+            borrower_id=borrower_id,
+            conversations=self.conversations.list_for_borrower(borrower_id),
+        )
 
     def handle_message(
         self,
@@ -119,16 +123,10 @@ class AnalysisEngine:
         analysis = analyze_cashflow(borrower, self.clock.today(), self.settings)
 
         if len(borrower.monthly_history) < self.settings.seasonality_minimum_history_months:
-            from app.schemas import RiskFlagsResponse
-
             flags = RiskFlagsResponse(
                 borrower_id=borrower.borrower_id,
-                current_flag="normal",
-                upcoming_flag=None,
-                upcoming_flag_month=None,
-                flagged_months=[],
-                flag_reason="insufficient_history",
-                supporting_evidence=["Not enough history for seasonality"],
+                analysis_basis="borrower_history",
+                **_INSUFFICIENT_HISTORY_FLAGS,
             )
         else:
             flags = build_risk_flags(borrower, analysis, self.clock.today(), self.settings)

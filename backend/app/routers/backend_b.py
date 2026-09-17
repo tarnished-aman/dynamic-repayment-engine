@@ -5,14 +5,24 @@ Reuses engine.repo and engine.payments from the Backend A facade.
 Does NOT implement seasonality, NLP, hardship classification, or relief decisions.
 """
 
-from datetime import datetime
+from copy import deepcopy
 from typing import Optional
 
 from fastapi import APIRouter, Query
+from pydantic import BaseModel
 
 from app.errors import api_error, borrower_not_found
-from app.schemas import BorrowerCategory, HardshipClassification, PaymentPlan, PaymentScheduleItem, RiskFlag
+from app.schemas import (
+    BorrowerCategory,
+    HardshipClassification,
+    PaymentPlan,
+    PaymentScheduleItem,
+    RiskFlag,
+)
+from app.services.cashflow import analyze_cashflow
 from app.services.engine import engine
+from app.services.risk_flags import build_risk_flags
+from app.services.trust_score import calculate_trust_score
 
 router = APIRouter()
 
@@ -54,10 +64,6 @@ def list_borrowers(
     Supports optional filtering by category, risk_flag, and hardship_classification.
     Trust score, flags and hardship are computed on the fly from the engine.
     """
-    from app.services.cashflow import analyze_cashflow
-    from app.services.risk_flags import build_risk_flags
-    from app.services.trust_score import calculate_trust_score
-
     results = []
     for bid in engine.repo.list_borrower_ids():
         borrower = engine.repo.get_borrower(bid)
@@ -119,20 +125,12 @@ def get_payment_plan(borrower_id: str):
     if borrower is None:
         raise borrower_not_found()
     plan = engine.payments.get_plan(borrower_id)
-    # get_plan always returns a plan when the borrower exists
     return plan
 
 
 # ---------------------------------------------------------------------------
 # POST /borrower/{id}/payment-plan/override
 # ---------------------------------------------------------------------------
-
-class PaymentPlanOverrideRequest:
-    pass
-
-
-from pydantic import BaseModel
-
 
 class OverrideRequest(BaseModel):
     new_schedule: list[PaymentScheduleItem]
@@ -159,10 +157,7 @@ def override_payment_plan(borrower_id: str, body: OverrideRequest):
     plan = engine.payments.get_plan(borrower_id)
     now = engine.clock.now()
 
-    from copy import deepcopy
-    from app.schemas import PaymentPlan as PaymentPlanSchema
-
-    updated = PaymentPlanSchema(
+    updated = PaymentPlan(
         borrower_id=borrower_id,
         original_schedule=deepcopy(plan.original_schedule),
         adjusted_schedule=list(body.new_schedule),
@@ -170,7 +165,11 @@ def override_payment_plan(borrower_id: str, body: OverrideRequest):
         updated_by="loan_officer",
         updated_at=now,
     )
-    engine.payments._plans[borrower_id] = updated
+    # Use the gateway's public update method if available, fall back to in-memory store.
+    if hasattr(engine.payments, "update_plan"):
+        engine.payments.update_plan(borrower_id, updated)
+    else:
+        engine.payments._plans[borrower_id] = updated
 
     return {
         "status": "updated",

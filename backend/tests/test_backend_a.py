@@ -2,7 +2,6 @@ from fastapi.testclient import TestClient
 
 from app.config import Settings
 from app.main import app
-from app.services.engine import engine
 from app.data import InMemoryBorrowerRepository, InMemoryConversationStore, InMemoryPaymentPlanGateway
 from app.services.engine import AnalysisEngine
 from app.services.nlp import NlpService

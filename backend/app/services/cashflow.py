@@ -133,6 +133,9 @@ def analyze_cashflow(
 ) -> CashflowAnalysisResponse:
     settings = settings or get_settings()
     rows = window_records(borrower, settings)
+    if not rows:
+        from app.errors import insufficient_history
+        raise insufficient_history()
     avg_income = sum(row.income for row in rows) / len(rows)
     avg_expense = sum(row.expenses for row in rows) / len(rows)
     latest = rows[-1]

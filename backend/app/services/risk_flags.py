@@ -4,12 +4,6 @@ from datetime import date
 from app.config import Settings, get_settings
 from app.data import abbr_from_key, month_key, shift_month
 from app.schemas import BorrowerRecord, CashflowAnalysisResponse, RiskFlagsResponse
-from app.services.seasonality import window_records
-
-
-def _month_num(abbr: str) -> int:
-    lookup = {name: idx for idx, name in enumerate(month_abbr) if name}
-    return lookup[abbr]
 
 
 def _lookahead_keys(as_of: date, months: int) -> list[str]:
